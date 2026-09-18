@@ -273,7 +273,6 @@ do
 	local Vector3 = Vector3
 	local Vector3new = Vector3.new
 	local FlingVelocity = Vector3new(16384, 16384, 16384)
-	local HatSpinVelocity = Vector3new(1e8, 1e8, 1e8) -- 甩飞别人饰品时的超高速旋转
 	local HatDropLinearVelocity = Vector3new(0, 27, 0)
 	local HideCharacterOffset = Vector3new(0, - 30, 0)
 	local Vector3one = Vector3.one
@@ -432,32 +431,6 @@ do
 				end
 			end
 		end
-	end
-
-	-- 从模型里找到任意 Accoutrement 的 Handle（用于甩飞别人的饰品）
-	local GetAccoutrementHandleFromModel = function(Model)
-		if not Model then return nil end
-
-		for _, Descendant in next, GetDescendants(Model) do
-			if IsA(Descendant, "Accoutrement") then
-				local Handle = FindFirstChildOfClassAndName(Descendant, "BasePart", "Handle")
-				if Handle then
-					return Handle
-				end
-			end
-		end
-
-		-- 兜底：有些游戏不把饰品放在 Accoutrement 里，直接找叫 Hat 的 Handle
-		local HumanoidRootPart = FindFirstChildOfClassAndName(Model, "BasePart", "HumanoidRootPart")
-		if HumanoidRootPart then
-			for _, Descendant in next, GetDescendants(Model) do
-				if IsA(Descendant, "BasePart") and (Descendant.Name == "Handle" or Descendant.Name == "Hat") and Descendant:FindFirstChildWhichIsA("SpecialMesh") then
-					return Descendant
-				end
-			end
-		end
-
-		return nil
 	end
 
 	local NewIndex = function(self, Index, Value)
@@ -932,31 +905,6 @@ do
 			local ToolFling = OptionsDefaultFlingOptions.ToolFling
 
 			if HatFling and OptionsHatDrop then
-				-- 优先处理：甩飞别人的饰品并超高速旋转
-				if Target and not IsDescendantOf(Character, Target) and not IsDescendantOf(Rig, Target) then
-					local TargetModel = FindFirstAncestorOfClass(Target, "Model")
-					if TargetModel and TargetModel ~= Rig and TargetModel ~= Character then
-						local TargetHandle = GetAccoutrementHandleFromModel(TargetModel)
-						if TargetHandle then
-							Exceptions[TargetHandle] = true
-
-							while IsMouseButtonPressed(UserInputService, MouseButton1) do
-								if TargetHandle.ReceiveAge == 0 then
-									TargetHandle.AssemblyAngularVelocity = HatSpinVelocity
-									TargetHandle.AssemblyLinearVelocity = FlingVelocity
-									TargetHandle.CFrame = Mouse.Hit + AntiSleep
-								end
-
-								taskwait()
-							end
-
-							Exceptions[TargetHandle] = nil
-							return
-						end
-					end
-				end
-
-				-- 原有逻辑：甩自己的帽子
 				local Part = type(HatFling) == "table" and GetHandleFromTable(HatFling)
 
 				if not Part then
